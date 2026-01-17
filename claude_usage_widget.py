@@ -74,6 +74,7 @@ class ClaudeUsageWidget(Gtk.Window):
 
         # Track state
         self.is_always_on_top = False
+        self.is_compact_mode = False
         self.normal_size = (400, 300)
         self.indicator = None
         self.scraper = None
@@ -137,10 +138,16 @@ class ClaudeUsageWidget(Gtk.Window):
         header.set_margin_bottom(4)
         header.get_style_context().add_class("header-box")
 
-        # Title label
-        title = Gtk.Label(label="Claude Usage")
-        title.get_style_context().add_class("title-label")
-        header.pack_start(title, False, False, 0)
+        # Title label (shown in normal mode)
+        self.title_label = Gtk.Label(label="Claude Usage")
+        self.title_label.get_style_context().add_class("title-label")
+        header.pack_start(self.title_label, False, False, 0)
+
+        # Usage summary label (shown in compact mode)
+        self.usage_summary_label = Gtk.Label(label="")
+        self.usage_summary_label.get_style_context().add_class("usage-summary")
+        self.usage_summary_label.set_no_show_all(True)
+        header.pack_start(self.usage_summary_label, False, False, 0)
 
         # Spacer
         header.pack_start(Gtk.Box(), True, True, 0)
@@ -153,14 +160,13 @@ class ClaudeUsageWidget(Gtk.Window):
         self.pin_btn.connect("toggled", self.on_toggle_always_on_top)
         header.pack_start(self.pin_btn, False, False, 0)
 
-        # Minimize to tray button
-        if APP_INDICATOR_AVAILABLE:
-            tray_btn = Gtk.Button()
-            tray_btn.set_tooltip_text("Minimize to tray")
-            tray_icon = Gtk.Image.new_from_icon_name("go-down-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
-            tray_btn.add(tray_icon)
-            tray_btn.connect("clicked", self.on_minimize_to_tray)
-            header.pack_start(tray_btn, False, False, 0)
+        # Compact mode toggle button
+        self.compact_btn = Gtk.ToggleButton()
+        self.compact_btn.set_tooltip_text("Toggle compact mode")
+        compact_icon = Gtk.Image.new_from_icon_name("view-compact-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
+        self.compact_btn.add(compact_icon)
+        self.compact_btn.connect("toggled", self.on_toggle_compact_mode)
+        header.pack_start(self.compact_btn, False, False, 0)
 
         # Refresh button
         refresh_btn = Gtk.Button()
@@ -343,6 +349,10 @@ class ClaudeUsageWidget(Gtk.Window):
             now = datetime.now().strftime("%H:%M:%S")
             self.status_label.set_text(f"Updated: {now} | Refresh: {REFRESH_INTERVAL}s")
 
+            # Update compact mode summary if active
+            if self.is_compact_mode:
+                self._update_usage_summary()
+
         except Exception as e:
             self._show_error(f"Parse error: {e}")
 
@@ -488,6 +498,47 @@ class ClaudeUsageWidget(Gtk.Window):
         self.is_always_on_top = button.get_active()
         self.set_keep_above(self.is_always_on_top)
 
+    def on_toggle_compact_mode(self, button):
+        """Toggle compact mode - show only header with usage text."""
+        self.is_compact_mode = button.get_active()
+        if self.is_compact_mode:
+            # Save current size before going compact
+            self.normal_size = self.get_size()
+            # Hide content and status bar
+            self.content_scroll.hide()
+            self.status_bar.hide()
+            # Show usage summary in header, hide title
+            self.title_label.hide()
+            self.usage_summary_label.show()
+            self._update_usage_summary()
+            # Resize to fit header only
+            self.resize(1, 1)  # Let GTK calculate minimum size
+        else:
+            # Show content and status bar
+            self.content_scroll.show()
+            self.status_bar.show()
+            # Hide usage summary, show title
+            self.usage_summary_label.hide()
+            self.title_label.show()
+            # Restore previous size
+            self.resize(*self.normal_size)
+
+    def _update_usage_summary(self):
+        """Update the compact usage summary text."""
+        if not self.last_data:
+            self.usage_summary_label.set_text("Loading...")
+            return
+
+        parts = []
+        if "five_hour" in self.last_data and self.last_data["five_hour"]:
+            util = self.last_data["five_hour"].get("utilization", 0)
+            parts.append(f"5h: {util:.0f}%")
+        if "seven_day" in self.last_data and self.last_data["seven_day"]:
+            util = self.last_data["seven_day"].get("utilization", 0)
+            parts.append(f"7d: {util:.0f}%")
+
+        self.usage_summary_label.set_text(" | ".join(parts) if parts else "No data")
+
     def on_window_press(self, widget, event):
         """Start window drag using GTK's native method."""
         if event.button == 1:
@@ -562,6 +613,12 @@ def apply_css():
         font-weight: bold;
         font-size: 11px;
         opacity: 0.9;
+    }
+
+    .usage-summary {
+        color: #a6e3a1;
+        font-weight: bold;
+        font-size: 11px;
     }
 
     .status-label {
