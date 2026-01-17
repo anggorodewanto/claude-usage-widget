@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant User
+    participant CMW as ClaudeMonitorWidget
+    participant VTE as VTE Terminal
+    participant Shell as Bash Shell
+    participant CCM as claude-code-monitor
+    participant Tray as System Tray
+
+    User->>CMW: Launch widget
+    CMW->>CMW: Initialize GTK Window
+    CMW->>CMW: Apply CSS styling
+    CMW->>Tray: Setup AppIndicator
+
+    CMW->>VTE: Create terminal
+    CMW->>VTE: spawn_async()
+    VTE->>Shell: Execute bash -c
+    Shell->>CCM: Run claude-code-monitor --plan max5
+    CCM-->>VTE: Terminal output stream
+
+    loop Continuous
+        CCM->>VTE: Output monitoring data
+        VTE->>CMW: Display in terminal
+    end
+
+    User->>CMW: Click restart
+    CMW->>VTE: reset()
+    CMW->>VTE: spawn_async()
+
+    User->>CMW: Click pin
+    CMW->>CMW: set_keep_above(true)
+
+    User->>CMW: Click close
+    CMW->>CMW: Hide window
+    CMW->>Tray: Show in tray
+
+    User->>Tray: Click "Show Window"
+    Tray->>CMW: Restore window

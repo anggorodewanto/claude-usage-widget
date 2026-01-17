@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant User
+    participant CUW as ClaudeUsageWidget
+    participant BC as browser_cookie3
+    participant Chrome
+    participant CS as cloudscraper
+    participant API as Claude.ai API
+    participant Display as Usage Display
+
+    User->>CUW: Launch widget
+    CUW->>CUW: Initialize GTK Window
+    CUW->>CUW: Setup System Tray
+    CUW->>Display: Show "Loading..."
+
+    CUW->>BC: Load cookies
+    BC->>Chrome: Read cookie database
+    Chrome-->>BC: Return cookies
+    BC-->>CUW: Cookie dictionary
+
+    CUW->>CS: Create scraper session
+    CUW->>CS: Set cookies
+
+    loop Every 30 seconds
+        CUW->>CS: GET /api/organizations/.../usage
+        CS->>API: HTTP Request with cookies
+        API-->>CS: Usage JSON data
+        CS-->>CUW: Response
+        CUW->>Display: Update progress bars
+        CUW->>CUW: Update status bar timestamp
+    end
+
+    User->>CUW: Click close
+    CUW->>CUW: Minimize to tray

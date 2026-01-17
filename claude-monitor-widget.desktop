@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Claude Monitor
+Comment=Floating widget for claude-code-monitor
+Exec=/home/ab/projects/claude-monitor-widget/claude_monitor_widget.py
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;monitor;terminal;
+StartupWMClass=claude-monitor-widget

@@ -1,0 +1,56 @@
+graph TB
+    subgraph "Desktop Environment"
+        APP_MENU["Application Menu"]
+        SYS_TRAY["System Tray"]
+    end
+
+    subgraph "Claude Monitor Widget"
+        CMW["claude_monitor_widget.py"]
+        CMW_WIN["ClaudeMonitorWidget<br/>GTK Window"]
+        CMW_TERM["VTE Terminal"]
+        CMW_TRAY["AppIndicator<br/>Tray Icon"]
+    end
+
+    subgraph "Claude Usage Widget"
+        CUW["claude_usage_widget.py"]
+        CUW_WIN["ClaudeUsageWidget<br/>GTK Window"]
+        CUW_DISPLAY["Usage Display<br/>Progress Bars"]
+        CUW_TRAY["AppIndicator<br/>Tray Icon"]
+    end
+
+    subgraph "External Dependencies"
+        CCM["claude-code-monitor<br/>(CLI Tool)"]
+        CLAUDE_API["Claude.ai API<br/>/api/organizations/.../usage"]
+        CHROME["Chrome Browser<br/>Cookies"]
+    end
+
+    subgraph "Python Libraries"
+        GTK["GTK 3.0"]
+        VTE["VTE 2.91"]
+        AYATANA["AyatanaAppIndicator3"]
+        CLOUDSCRAPER["cloudscraper"]
+        BROWSER_COOKIE["browser_cookie3"]
+    end
+
+    APP_MENU --> CMW
+    APP_MENU --> CUW
+
+    CMW --> CMW_WIN
+    CMW_WIN --> CMW_TERM
+    CMW_WIN --> CMW_TRAY
+    CMW_TRAY --> SYS_TRAY
+    CMW_TERM --> CCM
+
+    CUW --> CUW_WIN
+    CUW_WIN --> CUW_DISPLAY
+    CUW_WIN --> CUW_TRAY
+    CUW_TRAY --> SYS_TRAY
+    CUW_WIN --> CLOUDSCRAPER
+    CLOUDSCRAPER --> CLAUDE_API
+    BROWSER_COOKIE --> CHROME
+
+    CMW_WIN --> GTK
+    CMW_TERM --> VTE
+    CMW_TRAY --> AYATANA
+    CUW_WIN --> GTK
+    CUW_TRAY --> AYATANA

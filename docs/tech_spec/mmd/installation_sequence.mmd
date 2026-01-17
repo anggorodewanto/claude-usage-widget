@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant User
+    participant Script as install.sh
+    participant FS as File System
+    participant Pip as pip
+    participant Desktop as Desktop Environment
+
+    User->>Script: ./install.sh
+    Script->>FS: mkdir ~/.local/share/applications
+
+    alt venv does not exist
+        Script->>FS: python3 -m venv venv
+        Script->>Pip: pip install browser_cookie3 cloudscraper
+        Pip-->>Script: Dependencies installed
+    end
+
+    Script->>FS: Create .desktop file
+    Script->>FS: chmod +x claude_usage_widget.py
+    Script-->>User: Installation complete
+
+    User->>Desktop: Search "Claude Usage"
+    Desktop->>FS: Read .desktop file
+    Desktop->>Script: Execute widget

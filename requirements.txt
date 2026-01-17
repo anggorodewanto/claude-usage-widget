@@ -1,0 +1,7 @@
+# Claude Usage Widget dependencies
+browser_cookie3>=0.19.1
+cloudscraper>=1.2.71
+
+# Note: GTK dependencies are system packages, not pip packages
+# Install with: sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-vte-2.91
+# For system tray: sudo apt install gir1.2-ayatanaappindicator3-0.1
