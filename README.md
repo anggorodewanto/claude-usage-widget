@@ -91,7 +91,7 @@ chmod +x claude_usage_widget.py claude_monitor_widget.py
 ```
 
 **Requirements:**
-- [claude-code-monitor](https://github.com/anthropics/claude-code-monitor) CLI must be installed
+- [Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) CLI must be installed
 - Falls back to `htop` or `top` if not available
 
 ## Controls
