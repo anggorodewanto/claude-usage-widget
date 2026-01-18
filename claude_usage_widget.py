@@ -511,6 +511,8 @@ class ClaudeUsageWidget(Gtk.Window):
             self.title_label.hide()
             self.usage_summary_label.show()
             self._update_usage_summary()
+            # Add compact mode class to header for smaller buttons
+            self.header.get_style_context().add_class("compact-mode")
             # Resize to fit header only
             self.resize(1, 1)  # Let GTK calculate minimum size
         else:
@@ -520,6 +522,8 @@ class ClaudeUsageWidget(Gtk.Window):
             # Hide usage summary, show title
             self.usage_summary_label.hide()
             self.title_label.show()
+            # Remove compact mode class from header
+            self.header.get_style_context().remove_class("compact-mode")
             # Restore previous size
             self.resize(*self.normal_size)
 
@@ -671,6 +675,13 @@ def apply_css():
     button:checked {
         background: rgba(137, 180, 250, 0.9);
         color: #1e1e2e;
+    }
+
+    .compact-mode button {
+        min-width: 18px;
+        min-height: 18px;
+        padding: 2px 4px;
+        border-radius: 4px;
     }
 
     .close-button {
