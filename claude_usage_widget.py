@@ -349,59 +349,57 @@ class ClaudeUsageWidget(Gtk.Window):
             now = datetime.now().strftime("%H:%M:%S")
             self.status_label.set_text(f"Updated: {now} | Refresh: {REFRESH_INTERVAL}s")
 
-            # Update compact mode summary if active
-            if self.is_compact_mode:
-                self._update_usage_summary()
+            # Always update usage summary (it also updates tray label)
+            self._update_usage_summary()
 
         except Exception as e:
             self._show_error(f"Parse error: {e}")
 
         self.content_box.show_all()
 
+    def _parse_reset_time(self, reset_str):
+        """Parse reset time and return human-readable string."""
+        from datetime import datetime, timezone
+        try:
+            reset_dt = datetime.fromisoformat(reset_str.replace('+00:00', '+00:00'))
+            now = datetime.now(timezone.utc)
+            diff = reset_dt - now
+            hours = int(diff.total_seconds() // 3600)
+            minutes = int((diff.total_seconds() % 3600) // 60)
+            if hours > 0:
+                return f"{hours}h{minutes}m"
+            return f"{minutes}m"
+        except:
+            return "unknown"
+
     def _render_usage_data(self, data):
         """Render Claude.ai usage data."""
-        from datetime import datetime, timezone
-
-        def parse_reset_time(reset_str):
-            """Parse reset time and return human-readable string."""
-            try:
-                reset_dt = datetime.fromisoformat(reset_str.replace('+00:00', '+00:00'))
-                now = datetime.now(timezone.utc)
-                diff = reset_dt - now
-                hours = int(diff.total_seconds() // 3600)
-                minutes = int((diff.total_seconds() % 3600) // 60)
-                if hours > 0:
-                    return f"{hours}h {minutes}m"
-                return f"{minutes}m"
-            except:
-                return "unknown"
-
         # 5-hour usage (primary rate limit)
         if "five_hour" in data and data["five_hour"]:
             usage = data["five_hour"]
             util = usage.get("utilization", 0)
-            reset = parse_reset_time(usage.get("resets_at", ""))
+            reset = self._parse_reset_time(usage.get("resets_at", ""))
             self._add_usage_bar("5-Hour Usage", util, 100, f"Resets in {reset}")
 
         # 7-day usage (overall limit)
         if "seven_day" in data and data["seven_day"]:
             usage = data["seven_day"]
             util = usage.get("utilization", 0)
-            reset = parse_reset_time(usage.get("resets_at", ""))
+            reset = self._parse_reset_time(usage.get("resets_at", ""))
             self._add_usage_bar("7-Day Usage", util, 100, f"Resets in {reset}")
 
         # 7-day Opus usage
         if "seven_day_opus" in data and data["seven_day_opus"]:
             usage = data["seven_day_opus"]
             util = usage.get("utilization", 0)
-            reset = parse_reset_time(usage.get("resets_at", ""))
+            reset = self._parse_reset_time(usage.get("resets_at", ""))
             self._add_usage_bar("Opus (7-Day)", util, 100, f"Resets in {reset}")
 
         # 7-day Sonnet usage
         if "seven_day_sonnet" in data and data["seven_day_sonnet"]:
             usage = data["seven_day_sonnet"]
             util = usage.get("utilization", 0)
-            reset = parse_reset_time(usage.get("resets_at", ""))
+            reset = self._parse_reset_time(usage.get("resets_at", ""))
             self._add_usage_bar("Sonnet (7-Day)", util, 100, f"Resets in {reset}")
 
         # Extra usage if available
@@ -528,20 +526,30 @@ class ClaudeUsageWidget(Gtk.Window):
             self.resize(*self.normal_size)
 
     def _update_usage_summary(self):
-        """Update the compact usage summary text."""
+        """Update the compact usage summary text and tray label."""
         if not self.last_data:
-            self.usage_summary_label.set_text("Loading...")
+            summary = "Loading..."
+            self.usage_summary_label.set_text(summary)
+            if self.indicator:
+                self.indicator.set_label(summary, "Claude Usage")
             return
 
         parts = []
         if "five_hour" in self.last_data and self.last_data["five_hour"]:
-            util = self.last_data["five_hour"].get("utilization", 0)
-            parts.append(f"5h: {util:.0f}%")
+            usage = self.last_data["five_hour"]
+            util = usage.get("utilization", 0)
+            reset = self._parse_reset_time(usage.get("resets_at", ""))
+            parts.append(f"5h: {util:.0f}% ({reset})")
         if "seven_day" in self.last_data and self.last_data["seven_day"]:
             util = self.last_data["seven_day"].get("utilization", 0)
             parts.append(f"7d: {util:.0f}%")
 
-        self.usage_summary_label.set_text(" | ".join(parts) if parts else "No data")
+        summary = " | ".join(parts) if parts else "No data"
+        self.usage_summary_label.set_text(summary)
+        
+        # Also update tray label
+        if self.indicator:
+            self.indicator.set_label(summary, "Claude Usage")
 
     def on_window_press(self, widget, event):
         """Start window drag using GTK's native method."""
