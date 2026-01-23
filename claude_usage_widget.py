@@ -299,6 +299,7 @@ class ClaudeUsageWidget(Gtk.Window):
                 else:
                     GLib.idle_add(self._show_error, f"HTTP {response.status_code}: {response.text[:200]}")
             except Exception as e:
+                print(f"Fetch error: {e}")
                 GLib.idle_add(self._show_error, str(e))
 
         thread = threading.Thread(target=fetch, daemon=True)
@@ -320,6 +321,7 @@ class ClaudeUsageWidget(Gtk.Window):
 
     def _show_error(self, message):
         """Show error message."""
+        print(f"Error: {message}")
         self._clear_content()
         label = Gtk.Label(label=f"Error: {message}")
         label.set_line_wrap(True)
@@ -328,6 +330,10 @@ class ClaudeUsageWidget(Gtk.Window):
         self.content_box.pack_start(label, True, True, 0)
         self.content_box.show_all()
         self.status_label.set_text("Error")
+        
+        # Also update tray label to indicate error
+        if self.indicator:
+            self.indicator.set_label("⚠️ Error", "Claude Usage")
 
     def _update_display(self, data):
         """Update the display with usage data."""
@@ -349,12 +355,13 @@ class ClaudeUsageWidget(Gtk.Window):
             now = datetime.now().strftime("%H:%M:%S")
             self.status_label.set_text(f"Updated: {now} | Refresh: {REFRESH_INTERVAL}s")
 
-            # Always update usage summary (it also updates tray label)
-            self._update_usage_summary()
-
         except Exception as e:
+            print(f"Update error: {e}")
             self._show_error(f"Parse error: {e}")
 
+        # Always update usage summary (it also updates tray label)
+        # We do this outside the try/except to ensure tray reflects something
+        self._update_usage_summary()
         self.content_box.show_all()
 
     def _parse_reset_time(self, reset_str):
@@ -535,14 +542,24 @@ class ClaudeUsageWidget(Gtk.Window):
             return
 
         parts = []
-        if "five_hour" in self.last_data and self.last_data["five_hour"]:
-            usage = self.last_data["five_hour"]
-            util = usage.get("utilization", 0)
-            reset = self._parse_reset_time(usage.get("resets_at", ""))
-            parts.append(f"5h: {util:.0f}% ({reset})")
-        if "seven_day" in self.last_data and self.last_data["seven_day"]:
-            util = self.last_data["seven_day"].get("utilization", 0)
-            parts.append(f"7d: {util:.0f}%")
+        try:
+            if "five_hour" in self.last_data and self.last_data["five_hour"]:
+                usage = self.last_data["five_hour"]
+                util = usage.get("utilization", 0)
+                # Ensure util is numeric
+                try: util = float(util)
+                except: util = 0
+                reset = self._parse_reset_time(usage.get("resets_at", ""))
+                parts.append(f"5h: {util:.0f}% ({reset})")
+            if "seven_day" in self.last_data and self.last_data["seven_day"]:
+                usage = self.last_data["seven_day"]
+                util = usage.get("utilization", 0)
+                # Ensure util is numeric
+                try: util = float(util)
+                except: util = 0
+                parts.append(f"7d: {util:.0f}%")
+        except Exception as e:
+            print(f"Summary update error: {e}")
 
         summary = " | ".join(parts) if parts else "No data"
         self.usage_summary_label.set_text(summary)
