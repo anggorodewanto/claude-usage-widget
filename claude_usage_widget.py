@@ -81,6 +81,7 @@ class ClaudeUsageWidget(Gtk.Window):
         self.last_data = None
         self.last_position = None
         self.org_id = None
+        self.last_5h_reset = None
 
         # Create main container with rounded corners
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -338,6 +339,14 @@ class ClaudeUsageWidget(Gtk.Window):
     def _update_display(self, data):
         """Update the display with usage data."""
         self._clear_content()
+        
+        # Check for 5-hour reset
+        if data and isinstance(data, dict) and "five_hour" in data:
+            current_reset = data["five_hour"].get("resets_at")
+            if self.last_5h_reset and current_reset != self.last_5h_reset:
+                self._send_reset_prompt()
+            self.last_5h_reset = current_reset
+        
         self.last_data = data
 
         try:
@@ -497,6 +506,34 @@ class ClaudeUsageWidget(Gtk.Window):
             box.pack_start(sub_label, False, False, 0)
 
         self.content_box.pack_start(box, False, False, 8)
+
+    def _send_reset_prompt(self):
+        """Send a small prompt to Claude when 5-hour window resets."""
+        def send():
+            try:
+                # Create new conversation
+                conv_response = self.scraper.post(
+                    f"https://claude.ai/api/organizations/{self.org_id}/chat_conversations",
+                    json={"name": ""}, timeout=10
+                )
+                if conv_response.status_code != 201:
+                    print(f"Failed to create conversation: {conv_response.status_code}")
+                    return
+                
+                conv_uuid = conv_response.json().get("uuid")
+                
+                # Send minimal prompt
+                self.scraper.post(
+                    f"https://claude.ai/api/organizations/{self.org_id}/chat_conversations/{conv_uuid}/completion",
+                    json={"prompt": "hi", "timezone": "UTC", "model": "claude-3-5-sonnet-20241022", "attachments": []},
+                    timeout=30, stream=True
+                )
+                print("Reset prompt sent successfully")
+                
+            except Exception as e:
+                print(f"Failed to send reset prompt: {e}")
+        
+        threading.Thread(target=send, daemon=True).start()
 
     def on_toggle_always_on_top(self, button):
         """Toggle always-on-top mode."""
